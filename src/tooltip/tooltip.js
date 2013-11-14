@@ -348,7 +348,12 @@ angular.module( 'ui.bootstrap.tooltip', [ 'ui.bootstrap.position' ] )
     restrict: 'E',
     replace: true,
     scope: { content: '@', placement: '@', animation: '&', isOpen: '&' },
-    templateUrl: 'template/tooltip/tooltip-html-unsafe-popup.html'
+    templateUrl: 'template/tooltip/tooltip-html-unsafe-popup.html',
+	link: function (scope, elem, attrs, ngModel) {
+      scope.getContent = function getContent() {
+        return $sce.trustAsHtml(scope.content);
+      };
+	}
   };
 })
 
