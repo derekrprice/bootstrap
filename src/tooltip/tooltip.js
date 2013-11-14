@@ -343,7 +343,7 @@ angular.module( 'ui.bootstrap.tooltip', [ 'ui.bootstrap.position' ] )
   return $tooltip( 'tooltip', 'tooltip', 'mouseenter' );
 }])
 
-.directive( 'tooltipHtmlUnsafePopup', function () {
+.directive( 'tooltipHtmlUnsafePopup', function ($sce) {
   return {
     restrict: 'E',
     replace: true,
