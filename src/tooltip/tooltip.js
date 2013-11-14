@@ -174,67 +174,67 @@ angular.module( 'ui.bootstrap.tooltip', [ 'ui.bootstrap.position' ] )
               element.after( tooltip );
             }
 
-			// Sometimes placing the tooltip changes the size, rendering our initial
-			// position calculations invalid.  To compensate, iterate up to 5 times
-			// or until the size stabilizes.
-			var lastTtWidth = 0, lastTtHeight = 0;
-			for (var i = 0; i < 5; i++) {
-				// Get the position of the directive element.
-				position = appendToBody ? $position.offset( element ) : $position.position( element );
+            // Sometimes placing the tooltip changes the size, rendering our initial
+            // position calculations invalid.  To compensate, iterate up to 5 times
+            // or until the size stabilizes.
+            var lastTtWidth = 0, lastTtHeight = 0;
+            for (var i = 0; i < 5; i++) {
+              // Get the position of the directive element.
+              position = appendToBody ? $position.offset( element ) : $position.position( element );
 
-				// Get the height and width of the tooltip so we can center it.
-				ttWidth = tooltip.prop( 'offsetWidth' );
-				ttHeight = tooltip.prop( 'offsetHeight' );
+              // Get the height and width of the tooltip so we can center it.
+              ttWidth = tooltip.prop( 'offsetWidth' );
+              ttHeight = tooltip.prop( 'offsetHeight' );
 
-				if (lastTtWidth == ttWidth && lastTtHeight == ttHeight) {
-					break;
-				}
+              if (lastTtWidth == ttWidth && lastTtHeight == ttHeight) {
+                break;
+              }
 
-				lastTtWidth = ttWidth;
-				lastTtHeight = ttHeight;
-				
-				// Calculate the tooltip's top and left coordinates to center it with
-				// this directive.
-				switch ( scope.tt_placement ) {
-				  case 'mouse':
-					var mousePos = $position.mouse();
-					ttPosition = {
-					  top: mousePos.y,
-					  left: mousePos.x
-					};
-					break;
-				  case 'right':
-					ttPosition = {
-					  top: position.top + position.height / 2 - ttHeight / 2,
-					  left: position.left + position.width
-					};
-					break;
-				  case 'bottom':
-					ttPosition = {
-					  top: position.top + position.height,
-					  left: position.left + position.width / 2 - ttWidth / 2
-					};
-					break;
-				  case 'left':
-					ttPosition = {
-					  top: position.top + position.height / 2 - ttHeight / 2,
-					  left: position.left - ttWidth
-					};
-					break;
-				  default:
-					ttPosition = {
-					  top: position.top - ttHeight,
-					  left: position.left + position.width / 2 - ttWidth / 2
-					};
-					break;
-				}
+              lastTtWidth = ttWidth;
+              lastTtHeight = ttHeight;
+              
+              // Calculate the tooltip's top and left coordinates to center it with
+              // this directive.
+              switch ( scope.tt_placement ) {
+                case 'mouse':
+                var mousePos = $position.mouse();
+                ttPosition = {
+                  top: mousePos.y,
+                  left: mousePos.x
+                };
+                break;
+                case 'right':
+                ttPosition = {
+                  top: position.top + position.height / 2 - ttHeight / 2,
+                  left: position.left + position.width
+                };
+                break;
+                case 'bottom':
+                ttPosition = {
+                  top: position.top + position.height,
+                  left: position.left + position.width / 2 - ttWidth / 2
+                };
+                break;
+                case 'left':
+                ttPosition = {
+                  top: position.top + position.height / 2 - ttHeight / 2,
+                  left: position.left - ttWidth
+                };
+                break;
+                default:
+                ttPosition = {
+                  top: position.top - ttHeight,
+                  left: position.left + position.width / 2 - ttWidth / 2
+                };
+                break;
+              }
 
-				ttPosition.top += 'px';
-				ttPosition.left += 'px';
+              ttPosition.top += 'px';
+              ttPosition.left += 'px';
 
-				// Now set the calculated positioning.
-				tooltip.css( ttPosition );
-			}
+              // Now set the calculated positioning.
+              tooltip.css( ttPosition );
+            }
 
             // And show the tooltip.
             scope.tt_isOpen = true;
@@ -349,11 +349,11 @@ angular.module( 'ui.bootstrap.tooltip', [ 'ui.bootstrap.position' ] )
     replace: true,
     scope: { content: '@', placement: '@', animation: '&', isOpen: '&' },
     templateUrl: 'template/tooltip/tooltip-html-unsafe-popup.html',
-	link: function (scope, elem, attrs, ngModel) {
+    link: function (scope, elem, attrs, ngModel) {
       scope.getContent = function getContent() {
         return $sce.trustAsHtml(scope.content);
       };
-	}
+    }
   };
 })
 
