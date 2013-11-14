@@ -14,6 +14,8 @@ files = [
   'template/**/*.js'
 ];
 
+hostname = "h2o.localdomain.hp.com";
+
 // list of files to exclude
 exclude = [
 ];
@@ -26,7 +28,6 @@ exclude = [
 // - Safari
 // - PhantomJS
 browsers = [
-  'Chrome'
 ];
 
 // test results reporter to use
