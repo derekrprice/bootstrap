@@ -52,33 +52,6 @@ angular.module('ui.bootstrap.typeahead', ['ui.bootstrap.position'])
       //binding to a variable that indicates if matches are being retrieved asynchronously
       var isLoadingSetter = $parse(attrs.typeaheadLoading).assign || angular.noop;
 
-      // Used to avoid reopening the select dialog after a select via a click.
-      var bypassReopen = false;
-
-      //binding to a variable that provides an API to force open the select list.
-      var setForceOpen = $parse(attrs.typeaheadForceOpen).assign || angular.noop;
-      var getForceOpen = $parse(attrs.typeaheadForceOpen) || angular.noop;
-      var forceOpenChanged = false;  // Keep track to ignore click events.
-      if (attrs.typeaheadForceOpen) {
-		originalScope.$watch(attrs.typeaheadForceOpen, function(newVal, oldVal) {
-			if (newVal) {
-				// When this is due to a click event, avoid resetting showAll.
-				forceOpenChanged = true;
-
-				// Focus the input element when the drop-down is displayed.
-				// Delay this so the focus callback doesn't get called inside $apply.
-				setTimeout(function(){
-					element[0].focus();
-
-					// We've had time to process the click event.
-					forceOpenChanged = false;
-				}, 100);
-			} else {
-				resetMatches();
-			}
-		});
-      }
-
       //a callback executed when a match is selected
       var onSelectCallback = $parse(attrs.typeaheadOnSelect);
 
@@ -99,10 +72,7 @@ angular.module('ui.bootstrap.typeahead', ['ui.bootstrap.position'])
         matches: 'matches',
         active: 'activeIdx',
         select: 'select(activeIdx)',
-        'get-view-value': 'getViewValue()',
-        'get-force-open': 'getForceOpen()',
-        selection: 'selection()',
-        'select-clicked': 'selectClicked()',
+        haveselection: 'haveselection()',
         query: 'query',
         position: 'position'
       });
@@ -119,22 +89,18 @@ angular.module('ui.bootstrap.typeahead', ['ui.bootstrap.position'])
       });
 
       var resetMatches = function() {
-		setForceOpen(originalScope, false);
         scope.matches = [];
         scope.activeIdx = -1;
       };
 
-      /**
-       * Load the matches, potentially from a server.
-       */
       var getMatchesAsync = function(inputValue) {
         var locals = {$viewValue: inputValue};
         isLoadingSetter(originalScope, true);
         $q.when(parserResult.source(scope, locals)).then(function(matches) {
           //it might happen that several async queries were in progress if a user were typing fast
           //but we are interested only in responses that correspond to the current view value
-          var currentValue = modelCtrl.$viewValue;
-          if (angular.isUndefined(currentValue)) { currentValue = ''; }
+			var currentValue = modelCtrl.$viewValue;
+			if (angular.isUndefined(currentValue)) { currentValue = ''; }
           if (inputValue === currentValue) {
             if (matches.length > 0) {
 
@@ -146,20 +112,8 @@ angular.module('ui.bootstrap.typeahead', ['ui.bootstrap.position'])
                 locals[parserResult.itemName] = matches[i];
                 scope.matches.push({
                   label: parserResult.viewMapper(scope, locals),
-                  select: parserResult.modelMapper(originalScope, locals),
                   model: matches[i]
                 });
-              }
-
-              var model =  modelCtrl.$modelValue;
-              var view = parserResult.viewMapper(originalScope, locals);
-              if (
-                // If there is only one choice and it is an exact match, just select it.
-                matches.length == 1 && scope.matches[0].label === inputValue &&
-                // But don't do it twice or we could loop indefinitely.
-                scope.matches[0].select !== model)
-              {
-                scope.select(0);
               }
 
               scope.query = inputValue;
@@ -168,6 +122,7 @@ angular.module('ui.bootstrap.typeahead', ['ui.bootstrap.position'])
               //due to other elements being rendered
               scope.position = $position.position(element);
               scope.position.top = scope.position.top + element.prop('offsetHeight');
+
             } else {
               resetMatches();
             }
@@ -192,6 +147,7 @@ angular.module('ui.bootstrap.typeahead', ['ui.bootstrap.position'])
       function updateChoices() {
 		var inputValue = modelCtrl.$viewValue;
 		if (angular.isUndefined(inputValue)) { inputValue = ''; }
+        resetMatches();
         if (inputValue.length >= minSearch) {
           if (waitTime > 0) {
             if (timeoutPromise) {
@@ -204,29 +160,18 @@ angular.module('ui.bootstrap.typeahead', ['ui.bootstrap.position'])
             getMatchesAsync(inputValue);
           }
         }
-        return isEditable ? inputValue : undefined;
-        //return isEditable ? inputValue : $parse(attrs.ngModel)(originalScope);
-      }
 
-      // Open the selections on focus.
-      element.on('focus', function() {
-		if (!bypassReopen) {
-			scope.$apply(updateChoices);
-		}
-		bypassReopen = false;
-      });
+        return isEditable ? inputValue : undefined;
+      }
+      element.on('focus', function() {scope.$apply(updateChoices);});
       modelCtrl.$parsers.push(updateChoices);
 
-      element.on('blur', function(e) {
-        // If not editable and the model is not set, clear the input.
-        if (!isEditable && angular.isUndefined(modelCtrl.$modelValue)) {
-          scope.blurTimeout = $timeout(function() {
-			// Delete the local view value, but don't use modelCtrl.$setViewValue
-			// to avoid the callbacks that would pop open the suggestions again.
-            element.val(''); delete modelCtrl.$viewValue;
-          }, 100);
-        }
-      });
+      //element.on('blur', function() {
+		// If not editable and the model is not set, clear the input.
+	//	if (!isEditable && angular.isUndefined($parse(attrs.ngModel)(originalScope))) {
+	//		this.value = ''; delete modelCtrl.$viewValue;
+	//	}
+      //});
 
       modelCtrl.$formatters.push(function (modelValue) {
 
@@ -241,8 +186,7 @@ angular.module('ui.bootstrap.typeahead', ['ui.bootstrap.position'])
         } else {
 
           //it might happen that we don't have enough info to properly render input value
-          //we need to check for this situation and simply return model value if we can't apply
-          //custom formatting
+          //we need to check for this situation and simply return model value if we can't apply custom formatting
           locals[parserResult.itemName] = modelValue;
           candidateViewValue = parserResult.viewMapper(originalScope, locals);
           locals[parserResult.itemName] = undefined;
@@ -256,12 +200,10 @@ angular.module('ui.bootstrap.typeahead', ['ui.bootstrap.position'])
         //called from within the $digest() cycle
         var locals = {};
         var model, item;
+
         locals[parserResult.itemName] = item = scope.matches[activeIdx].model;
         model = parserResult.modelMapper(originalScope, locals);
         $setModelValue(originalScope, model);
-        // TODO: Can the following line be removed?  It was causing infinte loops.
-        //modelCtrl.$setViewValue(parserResult.viewMapper(originalScope, locals));
-		//modelCtrl.$render();
 
         onSelectCallback(originalScope, {
           $item: item,
@@ -269,49 +211,24 @@ angular.module('ui.bootstrap.typeahead', ['ui.bootstrap.position'])
           $label: parserResult.viewMapper(originalScope, locals)
         });
 
+        //return focus to the input element if a mach was selected via a mouse click event
         resetMatches();
-      };
-      scope.clearSelection = function() {
-        $setModelValue(originalScope, undefined);
-      };
-      scope.getViewValue = function() {
-		return modelCtrl.$viewValue;
-      };
-      scope.getForceOpen = function() {
-		return getForceOpen(originalScope);
-      };
-      scope.selection = function() {
-        return $parse(attrs.ngModel)(originalScope);
-      };
-
-      /**
-       * Cancel a blur event since we will be restoring focus to the input
-       * field shortly.
-       */
-      scope.selectClicked = function() {
-        if (scope.blurTimeout) {
-          $timeout.cancel(scope.blurTimeout);
-          delete scope.blurTimeout;
-        }
-
-        // Return focus to the input element after a match was selected via a mouse click event
 		// Delay this so the focus callback doesn't get called inside $apply.
-        setTimeout(function(){bypassReopen = true; element[0].focus();}, 100);
+        setTimeout(function(){element[0].focus();}, 100);
       };
+		scope.haveselection = function() {
+			return angular.isDefined($parse(attrs.ngModel)(originalScope));
+		};
 
       //bind keyboard events: arrows up(38) / down(40), enter(13) and tab(9), esc(27)
       element.bind('keydown', function (evt) {
+
         //typeahead is open and an "interesting" key was pressed
-        if (
-          !(//isOpen
-            scope.matches.length > 1 ||
-            scope.matches.length == 1 &&
-               (scope.matches[0].label !== modelCtrl.$viewValue || getForceOpen(originalScope))
-          ) ||
-          HOT_KEYS.indexOf(evt.which) === -1) {
-          setForceOpen(originalScope, false);
+        if (scope.matches.length || HOT_KEYS.indexOf(evt.which) === -1) {
           return;
         }
+
+        evt.preventDefault();
 
         if (evt.which === 40) {
           // Down Arrow
@@ -329,11 +246,6 @@ angular.module('ui.bootstrap.typeahead', ['ui.bootstrap.position'])
             scope.select(scope.activeIdx);
           });
 
-          // Let tab switch to the next input field after selection.
-          if (evt.which == 13) {
-            evt.preventDefault();
-          }
-
         } else if (evt.which === 27) {
           // Escape
           evt.stopPropagation();
@@ -344,10 +256,8 @@ angular.module('ui.bootstrap.typeahead', ['ui.bootstrap.position'])
       });
 
       $document.bind('click', function(e){
-		// Clicks in the typeahead input are OK.  Also ignore clicks that come
-		// right after a showAll change, assuming that this is the click event
-		// that triggered the showAll change.
-		if (e.target !== element[0] && !forceOpenChanged) {
+		// Clicks in the typeahead input are OK.
+		if (e.target !== element[0]) {
 			resetMatches();
 			scope.$digest();
 		}
@@ -367,10 +277,7 @@ angular.module('ui.bootstrap.typeahead', ['ui.bootstrap.position'])
         query:'=',
         active:'=',
         position:'=',
-        selectClicked:'&',
-        getViewValue:'&',
-        getForceOpen:'&',
-        selection:'&',
+        haveselection:'&',
         select:'&'
       },
       replace:true,
@@ -382,8 +289,7 @@ angular.module('ui.bootstrap.typeahead', ['ui.bootstrap.position'])
         scope.isOpen = function () {
 			return (
 				scope.matches.length > 1 ||
-				scope.matches.length == 1 &&
-				(scope.matches[0].label !== scope.getViewValue() || scope.getForceOpen())
+				scope.matches.length > 0 && !scope.haveselection()
 			);
         };
 
@@ -420,20 +326,13 @@ angular.module('ui.bootstrap.typeahead', ['ui.bootstrap.position'])
     };
   }])
 
-  .filter('typeaheadHighlight', function() {
+  .filter('typeaheadHighlight', ['$sce', function($sce) {
 
     function escapeRegexp(queryToEscape) {
       return queryToEscape.replace(/([.?*+^$[\]\\(){}|-])/g, "\\$1");
     }
 
     return function(matchItem, query) {
-      return query ? matchItem.replace(new RegExp(escapeRegexp(query), 'gi'), '<strong>$&</strong>') : matchItem;
-    };
-  })
-
-  .filter('trustHtml', ['$sce', function($sce) {
-
-    return function(html) {
-      return $sce.trustAsHtml(html);
+      return $sce.trustAsHtml(query ? matchItem.replace(new RegExp(escapeRegexp(query), 'gi'), '<strong>$&</strong>') : matchItem);
     };
   }]);
