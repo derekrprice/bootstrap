@@ -24,7 +24,8 @@ dialogModule.provider("$dialog", function(){
     backdropFade: false,
     dialogFade:false,
     keyboard: true, // close with esc key
-    backdropClick: true // only in conjunction with backdrop=true
+    backdropClick: true, // only in conjunction with backdrop=true
+	model: {}
     /* other options: template, templateUrl, controller */
 	};
 
@@ -102,14 +103,28 @@ dialogModule.provider("$dialog", function(){
     // The `open(templateUrl, controller)` method opens the dialog.
     // Use the `templateUrl` and `controller` arguments if specifying them at dialog creation time is not desired.
     Dialog.prototype.open = function(templateUrl, controller){
-      var self = this, options = this.options;
+		var self = this, options = this.options;
 
-      if(templateUrl){
-        options.templateUrl = templateUrl;
-      }
-      if(controller){
-        options.controller = controller;
-      }
+		if (angular.isObject(templateUrl)) {
+			var opts = templateUrl;
+			if(opts.templateUrl){
+				options.templateUrl = templateUrl;
+			}
+			if(opts.controller){
+				options.controller = controller;
+			}
+			if (opts.model) {
+				// Copy, to survive dereferencing of scope alias.
+				angular.copy(opts.model, options.model);
+			}
+		} else {
+			if(templateUrl){
+				options.templateUrl = templateUrl;
+			}
+			if(controller){
+				options.controller = controller;
+			}
+		}
 
       if(!(options.template || options.templateUrl)) {
         throw new Error('Dialog.open expected template or templateUrl, neither found. Use options or open method to specify them.');
@@ -117,14 +132,16 @@ dialogModule.provider("$dialog", function(){
 
       this._loadResolves().then(function(locals) {
         var $scope = locals.$scope = self.$scope = locals.$scope ? locals.$scope : $rootScope.$new();
+		$scope.$model = locals.dialog.options.model;
 
-        self.modalEl.html(locals.$template);
+        self.modalEl.html('<div class="modal-dialog"><div class="modal-content">' + locals.$template + '</div></div>');
 
         if (self.options.controller) {
           var ctrl = $controller(self.options.controller, locals);
           self.modalEl.children().data('ngControllerController', ctrl);
         }
 
+		self.modalEl.css('display', 'block');
         $compile(self.modalEl)($scope);
         self._addElementsToDom();
 
