@@ -160,6 +160,8 @@ angular.module('ui.bootstrap.typeahead', ['ui.bootstrap.position'])
                 scope.matches[0].select !== model)
               {
                 scope.select(0);
+              } else if (matches.length === 0 && !isEditable) {
+				scope.clearSelection();
               }
 
               scope.query = inputValue;
@@ -258,10 +260,15 @@ angular.module('ui.bootstrap.typeahead', ['ui.bootstrap.position'])
         var model, item;
         locals[parserResult.itemName] = item = scope.matches[activeIdx].model;
         model = parserResult.modelMapper(originalScope, locals);
+		// Need to call this to set the input (& therefore form) $dirty flag
+        modelCtrl.$setViewValue(parserResult.viewMapper(originalScope, locals));
+		// This is all that is necessary to call if we didn't have to set the
+		// $dirty flag.  Would be nice if NG would let us set $dirty directly.
         $setModelValue(originalScope, model);
-        // TODO: Can the following line be removed?  It was causing infinte loops.
-        //modelCtrl.$setViewValue(parserResult.viewMapper(originalScope, locals));
-		//modelCtrl.$render();
+		// This is only necessary when we call $setViewValue.  Without that,
+		// $setModelValue is enough to update the DOM.  Dunno why we need this
+		// now.
+		modelCtrl.$render();
 
         onSelectCallback(originalScope, {
           $item: item,
