@@ -134,6 +134,7 @@ angular.module('ui.bootstrap.typeahead', ['ui.bootstrap.position'])
           //it might happen that several async queries were in progress if a user were typing fast
           //but we are interested only in responses that correspond to the current view value
           var currentValue = modelCtrl.$viewValue;
+          var model;
           if (angular.isUndefined(currentValue)) { currentValue = ''; }
           if (inputValue === currentValue) {
             if (matches.length > 0) {
@@ -142,27 +143,18 @@ angular.module('ui.bootstrap.typeahead', ['ui.bootstrap.position'])
               scope.matches.length = 0;
 
               //transform labels
-              for(var i=0; i<matches.length; i++) {
-                locals[parserResult.itemName] = matches[i];
-                scope.matches.push({
+              angular.forEach(matches, function (match) {
+                locals[parserResult.itemName] = match;
+				var option = {
                   label: parserResult.viewMapper(scope, locals),
                   select: parserResult.modelMapper(originalScope, locals),
-                  model: matches[i]
-                });
-              }
-
-              var model =  modelCtrl.$modelValue;
-              var view = parserResult.viewMapper(originalScope, locals);
-              if (
-                // If there is only one choice and it is an exact match, just select it.
-                matches.length == 1 && scope.matches[0].label === inputValue &&
-                // But don't do it twice or we could loop indefinitely.
-                scope.matches[0].select !== model)
-              {
-                scope.select(0);
-              } else if (matches.length === 0 && !isEditable) {
-				scope.clearSelection();
-              }
+                  model: match
+                };
+				if (option.label === inputValue) {
+					model = option.select;
+				}
+				scope.matches.push (option);
+              });
 
               scope.query = inputValue;
               //position pop-up with matches - we need to re-calculate its position each time we are opening a window
@@ -173,10 +165,17 @@ angular.module('ui.bootstrap.typeahead', ['ui.bootstrap.position'])
             } else {
               resetMatches();
             }
+
+			// Now resolve the model value
+			model = model ? model : isEditable ? inputValue : undefined;
+			$setModelValue (originalScope, model);
+
+			// Turn off the loading indicator.
             isLoadingSetter(originalScope, false);
           }
         }, function(){
           resetMatches();
+          $setModelValue (originalScope, undefined);
           isLoadingSetter(originalScope, false);
         });
       };
@@ -202,6 +201,7 @@ angular.module('ui.bootstrap.typeahead', ['ui.bootstrap.position'])
             timeoutPromise = $timeout(function () {
               getMatchesAsync(inputValue);
             }, waitTime);
+			return timeoutProcess;
           } else {
             getMatchesAsync(inputValue);
           }
@@ -260,14 +260,9 @@ angular.module('ui.bootstrap.typeahead', ['ui.bootstrap.position'])
         var model, item;
         locals[parserResult.itemName] = item = scope.matches[activeIdx].model;
         model = parserResult.modelMapper(originalScope, locals);
+
 		// Need to call this to set the input (& therefore form) $dirty flag
         modelCtrl.$setViewValue(parserResult.viewMapper(originalScope, locals));
-		// This is all that is necessary to call if we didn't have to set the
-		// $dirty flag.  Would be nice if NG would let us set $dirty directly.
-        $setModelValue(originalScope, model);
-		// This is only necessary when we call $setViewValue.  Without that,
-		// $setModelValue is enough to update the DOM.  Dunno why we need this
-		// now.
 		modelCtrl.$render();
 
         onSelectCallback(originalScope, {
