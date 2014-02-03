@@ -3125,6 +3125,7 @@ angular.module('ui.bootstrap.typeahead', ['ui.bootstrap.position'])
               //due to other elements being rendered
               scope.position = $position.position(element);
               scope.position.top = scope.position.top + element.prop('offsetHeight');
+              scope.position.width = element.prop('offsetWidth');
             } else {
               resetMatches();
             }
@@ -3660,7 +3661,7 @@ angular.module("template/typeahead/typeahead-match.html", []).run(["$templateCac
 
 angular.module("template/typeahead/typeahead-popup.html", []).run(["$templateCache", function($templateCache) {
   $templateCache.put("template/typeahead/typeahead-popup.html",
-    "<ul class=\"dropdown-menu\" ng-style=\"{display: isOpen()&&'block' || 'none', top: position.top+'px', left: position.left+'px'}\">\n" +
+    "<ul class=\"dropdown-menu\" ng-style=\"{display: isOpen()&&'block' || 'none', top: position.top+'px', left: position.left+'px', width: position.width+'px'}\">\n" +
     "    <li ng-repeat=\"match in matches\" ng-class=\"{active: isActive($index) }\" ng-mouseenter=\"selectActive($index)\" ng-click=\"selectClicked(); selectMatch($index);\">\n" +
     "        <typeahead-match index=\"$index\" match=\"match\" query=\"query\" template-url=\"templateUrl\"></typeahead-match>\n" +
     "    </li>\n" +
