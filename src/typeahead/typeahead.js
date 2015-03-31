@@ -202,7 +202,7 @@ angular.module('ui.bootstrap.typeahead', ['ui.bootstrap.position'])
             timeoutPromise = $timeout(function () {
               getMatchesAsync(inputValue);
             }, waitTime);
-			return timeoutProcess;
+			return timeoutPromise;
           } else {
             getMatchesAsync(inputValue);
           }
